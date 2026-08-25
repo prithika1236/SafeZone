@@ -1,0 +1,2 @@
+source_reference,crime_type,severity,latitude,longitude,occurred_at,reported_at,ward,area,status
+SAMPLE-INCIDENT-001,THEFT,3,12.9716,77.5946,2026-08-20T09:30:00+05:30,2026-08-20T10:00:00+05:30,Sample Ward,Sample Area,REPORTED
