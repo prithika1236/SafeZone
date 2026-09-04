@@ -13,7 +13,7 @@ from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.crime import CrimeIncident
-from app.models.enums import PatrolUnitStatus
+from app.models.enums import CrimeIncidentStatus, PatrolUnitStatus
 from app.models.location import LocationUpdate
 from app.models.police import PatrolUnit
 from app.schemas.location import (
@@ -110,6 +110,7 @@ async def incidents_within_radius(
     center: Coordinate,
     radius_meters: float,
     *,
+    statuses: Sequence[CrimeIncidentStatus] | None = None,
     limit: int = 500,
 ) -> list[IncidentMapDTO]:
     radius = validate_radius(radius_meters)
@@ -118,19 +119,21 @@ async def incidents_within_radius(
     origin = _geography_point(center)
     longitude, latitude = _geometry_coordinates(CrimeIncident.location)
     distance = func.ST_Distance(CrimeIncident.location, origin)
+    statement = select(
+        CrimeIncident.id,
+        CrimeIncident.crime_type,
+        CrimeIncident.severity,
+        CrimeIncident.occurred_at,
+        CrimeIncident.status,
+        longitude,
+        latitude,
+        distance.label("distance_meters"),
+    ).where(func.ST_DWithin(CrimeIncident.location, origin, radius))
+    if statuses:
+        statement = statement.where(CrimeIncident.status.in_(statuses))
     rows = (
         await session.execute(
-            select(
-                CrimeIncident.id,
-                CrimeIncident.crime_type,
-                CrimeIncident.severity,
-                CrimeIncident.occurred_at,
-                CrimeIncident.status,
-                longitude,
-                latitude,
-                distance.label("distance_meters"),
-            )
-            .where(func.ST_DWithin(CrimeIncident.location, origin, radius))
+            statement
             .order_by(distance, CrimeIncident.id)
             .limit(limit)
         )

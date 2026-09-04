@@ -74,6 +74,27 @@ class Settings(BaseSettings):
     default_proximity_radius_meters: PositiveFloat = Field(
         default=3000.0, validation_alias="DEFAULT_PROXIMITY_RADIUS_METERS"
     )
+    risk_frequency_weight: float = Field(default=0.25, ge=0, validation_alias="RISK_FREQUENCY_WEIGHT")
+    risk_severity_weight: float = Field(default=0.30, ge=0, validation_alias="RISK_SEVERITY_WEIGHT")
+    risk_recency_weight: float = Field(default=0.30, ge=0, validation_alias="RISK_RECENCY_WEIGHT")
+    risk_time_weight: float = Field(default=0.15, ge=0, validation_alias="RISK_TIME_WEIGHT")
+    risk_recency_decay_lambda: PositiveFloat = Field(
+        default=0.05, validation_alias="RISK_RECENCY_DECAY_LAMBDA"
+    )
+    risk_frequency_saturation_count: PositiveFloat = Field(
+        default=5.0, validation_alias="RISK_FREQUENCY_SATURATION_COUNT"
+    )
+    risk_time_relevance_floor: float = Field(
+        default=0.25, ge=0, le=1, validation_alias="RISK_TIME_RELEVANCE_FLOOR"
+    )
+    risk_severity_mapping: dict[int, float] = Field(
+        default_factory=lambda: {1: 0.2, 2: 0.4, 3: 0.6, 4: 0.8, 5: 1.0},
+        validation_alias="RISK_SEVERITY_MAPPING",
+    )
+    risk_model_version: str = Field(
+        default="weighted-risk-v1", min_length=1, max_length=80,
+        validation_alias="RISK_MODEL_VERSION",
+    )
 
     @field_validator("allowed_frontend_origins")
     @classmethod
