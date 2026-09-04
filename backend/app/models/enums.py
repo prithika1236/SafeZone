@@ -47,8 +47,13 @@ class OptimizationRunStatus(StrEnum):
 
 
 class AssignmentStatus(StrEnum):
+    # Legacy values remain readable for backward compatibility.
     PLANNED = "PLANNED"
     ACTIVE = "ACTIVE"
+    ASSIGNED = "ASSIGNED"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    AT_PRP = "AT_PRP"
+    UNAVAILABLE = "UNAVAILABLE"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
