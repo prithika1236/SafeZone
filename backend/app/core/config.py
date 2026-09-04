@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, PositiveInt, field_validator
+from pydantic import AnyHttpUrl, Field, PositiveFloat, PositiveInt, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     routing_service_base_url: AnyHttpUrl = Field(
         default=AnyHttpUrl("http://localhost:5000"),
         validation_alias="ROUTING_SERVICE_BASE_URL",
+    )
+    routing_service_timeout_seconds: PositiveFloat = Field(
+        default=5.0, validation_alias="ROUTING_SERVICE_TIMEOUT_SECONDS"
+    )
+    default_proximity_radius_meters: PositiveFloat = Field(
+        default=3000.0, validation_alias="DEFAULT_PROXIMITY_RADIUS_METERS"
     )
 
     @field_validator("allowed_frontend_origins")
