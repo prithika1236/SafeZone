@@ -91,7 +91,7 @@ python -m alembic upgrade head
 
 See `docs/DATABASE.md` for the domain model, PostGIS conventions, and migration requirements.
 
-Authentication endpoints are documented in `docs/AUTHENTICATION.md`, crime management in `docs/CRIME_DATA.md`, spatial/routing conventions in `docs/GEOSPATIAL_SERVICES.md`, and the explainable scoring formula in `docs/RISK_MODEL.md`. The interactive API documentation is available at `http://127.0.0.1:8000/docs` while the backend is running.
+Authentication endpoints are documented in `docs/AUTHENTICATION.md`, crime management in `docs/CRIME_DATA.md`, spatial/routing conventions in `docs/GEOSPATIAL_SERVICES.md`, the explainable scoring formula in `docs/RISK_MODEL.md`, and candidate assumptions in `docs/CANDIDATE_GENERATION.md`. The interactive API documentation is available at `http://127.0.0.1:8000/docs` while the backend is running.
 
 ### Admin dashboard
 
