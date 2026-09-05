@@ -15,6 +15,8 @@ abstract interface class DeviceLocationService {
 }
 
 class GeolocatorLocationService implements DeviceLocationService {
+  static const recentLocationMaximumAge = Duration(minutes: 5);
+
   @override
   Future<bool> openSettings() => Geolocator.openAppSettings();
 
@@ -39,21 +41,45 @@ class GeolocatorLocationService implements DeviceLocationService {
         'Location permission is permanently denied. Enable it from device settings.',
       );
     }
+    final cachedPosition = await _recentLastKnownPosition();
+    if (cachedPosition != null) {
+      return _pointFromPosition(cachedPosition);
+    }
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
+          timeLimit: Duration(seconds: 10),
         ),
-      );
-      return GeoPoint(
-          latitude: position.latitude, longitude: position.longitude);
+      ).timeout(const Duration(seconds: 12));
+      return _pointFromPosition(position);
     } on Exception {
+      final recentPosition = await _recentLastKnownPosition();
+      if (recentPosition != null) {
+        return _pointFromPosition(recentPosition);
+      }
       throw const LocationUnavailableException(
-        'Your current location could not be obtained. Check GPS signal and try again.',
+        'A current or recent location could not be obtained. Check GPS signal and try again.',
       );
     }
   }
+
+  Future<Position?> _recentLastKnownPosition() async {
+    try {
+      final position = await Geolocator.getLastKnownPosition()
+          .timeout(const Duration(seconds: 2));
+      return position != null && isRecentLocationTimestamp(position.timestamp)
+          ? position
+          : null;
+    } on Exception {
+      return null;
+    }
+  }
+
+  GeoPoint _pointFromPosition(Position position) => GeoPoint(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
 
   @override
   double distanceMeters(GeoPoint from, GeoPoint to) =>
@@ -63,4 +89,13 @@ class GeolocatorLocationService implements DeviceLocationService {
         to.latitude,
         to.longitude,
       );
+}
+
+bool isRecentLocationTimestamp(
+  DateTime timestamp, {
+  DateTime? now,
+  Duration maximumAge = GeolocatorLocationService.recentLocationMaximumAge,
+}) {
+  final age = (now ?? DateTime.now()).toUtc().difference(timestamp.toUtc());
+  return age >= const Duration(seconds: -30) && age <= maximumAge;
 }
