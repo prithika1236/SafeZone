@@ -14,7 +14,13 @@ void main() {
       client: MockClient((request) async {
         if (request.url.path == '/auth/login') {
           expect(request.bodyFields['username'], 'officer@example.com');
-          return http.Response(jsonEncode({'access_token': 'opaque-token', 'token_type': 'bearer', 'expires_in': 1800}), 200);
+          return http.Response(
+              jsonEncode({
+                'access_token': 'opaque-token',
+                'token_type': 'bearer',
+                'expires_in': 1800
+              }),
+              200);
         }
         expect(request.headers['Authorization'], 'Bearer opaque-token');
         return http.Response(jsonEncode(policeProfile), 200);
@@ -34,13 +40,16 @@ void main() {
       tokenStore: tokens,
       client: MockClient((request) async {
         if (request.url.path == '/auth/login') {
-          return http.Response(jsonEncode({'access_token': 'opaque-token'}), 200);
+          return http.Response(
+              jsonEncode({'access_token': 'opaque-token'}), 200);
         }
-        return http.Response(jsonEncode({...policeProfile, 'role': 'CITIZEN'}), 200);
+        return http.Response(
+            jsonEncode({...policeProfile, 'role': 'CITIZEN'}), 200);
       }),
     );
 
-    await expectLater(client.login('citizen@example.com', 'password'), throwsA(isA<ApiException>()));
+    await expectLater(client.login('citizen@example.com', 'password'),
+        throwsA(isA<ApiException>()));
     expect(tokens.value, isNull);
   });
 
@@ -49,10 +58,54 @@ void main() {
     final client = ApiClient(
       baseUrl: 'http://safezone.test',
       tokenStore: tokens,
-      client: MockClient((_) async => http.Response(jsonEncode({'detail': 'Assignment not found'}), 404)),
+      client: MockClient((_) async =>
+          http.Response(jsonEncode({'detail': 'Assignment not found'}), 404)),
     );
 
     expect(await client.currentAssignment(), isNull);
+  });
+
+  test('citizen login accepts only citizen profile', () async {
+    final tokens = MemoryTokens();
+    final client = ApiClient(
+        baseUrl: 'http://safezone.test',
+        tokenStore: tokens,
+        client: MockClient((request) async {
+          if (request.url.path == '/auth/login') {
+            return http.Response(
+                jsonEncode({'access_token': 'citizen-token'}), 200);
+          }
+          return http.Response(
+              jsonEncode({...policeProfile, 'role': 'CITIZEN'}), 200);
+        }));
+    final profile = await client.loginForRole(
+        'citizen@example.com', 'valid-password',
+        expectedRole: 'CITIZEN');
+    expect(profile.role, 'CITIZEN');
+    expect(tokens.value, 'citizen-token');
+  });
+
+  test('emergency contacts remain owner-authorized API data', () async {
+    final tokens = MemoryTokens()..value = 'citizen-token';
+    final client = ApiClient(
+        baseUrl: 'http://safezone.test',
+        tokenStore: tokens,
+        client: MockClient((request) async {
+          expect(request.headers['Authorization'], 'Bearer citizen-token');
+          return http.Response(
+              jsonEncode([
+                {
+                  'id': 'contact-id',
+                  'name': 'Mother',
+                  'phone_number': '+91 9876543210',
+                  'relationship_label': 'Parent'
+                }
+              ]),
+              200);
+        }));
+    final contacts = await client.emergencyContacts();
+    expect(contacts.single.name, 'Mother');
+    expect(contacts.single.phoneNumber, '+91 9876543210');
   });
 }
 

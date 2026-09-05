@@ -8,17 +8,30 @@ import 'package:safezone_app/services/api_client.dart';
 import 'package:safezone_app/services/session_controller.dart';
 
 void main() {
-  testWidgets('renders the police login after session restoration', (tester) async {
+  testWidgets('renders citizen authentication after session restoration',
+      (tester) async {
     final session = SessionController(apiClient: _SignedOutApi());
     await tester.pumpWidget(SafeZoneApp(sessionController: session));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ready for duty?'), findsOneWidget);
-    expect(find.text('Sign in securely'), findsOneWidget);
-    expect(find.text('Authorized POLICE accounts only'), findsOneWidget);
+    expect(find.text('Citizen sign in'), findsOneWidget);
+    expect(find.text('Police officer sign in'), findsOneWidget);
   });
 
-  testWidgets('routes an authenticated police user to police home', (tester) async {
+  testWidgets('routes an authenticated citizen to citizen home',
+      (tester) async {
+    final session = SessionController(apiClient: _CitizenApi());
+    await tester.pumpWidget(SafeZoneApp(sessionController: session));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SafeZone Citizen'), findsOneWidget);
+    expect(
+        find.text('SOS dispatch is not active in this stage.'), findsOneWidget);
+    expect(find.text('Emergency support when you need it.'), findsOneWidget);
+  });
+
+  testWidgets('routes an authenticated police user to police home',
+      (tester) async {
     final session = SessionController(apiClient: _PoliceApi());
     await tester.pumpWidget(SafeZoneApp(sessionController: session));
     await tester.pumpAndSettle();
@@ -61,4 +74,15 @@ class _PoliceApi extends _SignedOutApi {
 
   @override
   Future<PatrolAssignment?> currentAssignment() async => null;
+}
+
+class _CitizenApi extends _SignedOutApi {
+  @override
+  Future<UserProfile> currentUser() async => const UserProfile(
+        id: 'citizen-id',
+        name: 'Citizen Test',
+        email: 'citizen@example.com',
+        role: 'CITIZEN',
+        isActive: true,
+      );
 }

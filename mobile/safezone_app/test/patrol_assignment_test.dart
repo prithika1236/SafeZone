@@ -3,8 +3,10 @@ import 'package:safezone_app/models/patrol_assignment.dart';
 
 void main() {
   test('assignment lifecycle exposes only valid police actions', () {
-    final assigned = PatrolAssignment.fromJson({...payload, 'status': 'ASSIGNED'});
-    final acknowledged = PatrolAssignment.fromJson({...payload, 'status': 'ACKNOWLEDGED'});
+    final assigned =
+        PatrolAssignment.fromJson({...payload, 'status': 'ASSIGNED'});
+    final acknowledged =
+        PatrolAssignment.fromJson({...payload, 'status': 'ACKNOWLEDGED'});
     final arrived = PatrolAssignment.fromJson({...payload, 'status': 'AT_PRP'});
 
     expect(assigned.canAcknowledge, isTrue);

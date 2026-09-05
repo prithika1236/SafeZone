@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:safezone_app/citizen/citizen_auth_screen.dart';
+import 'package:safezone_app/citizen/citizen_home_screen.dart';
 import 'package:safezone_app/police/police_home_screen.dart';
-import 'package:safezone_app/police/police_login_screen.dart';
 import 'package:safezone_app/services/session_controller.dart';
 import 'package:safezone_app/shared/theme.dart';
 
@@ -15,7 +16,8 @@ class SafeZoneApp extends StatefulWidget {
 }
 
 class _SafeZoneAppState extends State<SafeZoneApp> {
-  late final SessionController session = widget.sessionController ?? SessionController();
+  late final SessionController session =
+      widget.sessionController ?? SessionController();
 
   @override
   void initState() {
@@ -31,15 +33,17 @@ class _SafeZoneAppState extends State<SafeZoneApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'SafeZone Police',
+        title: 'SafeZone',
         debugShowCheckedModeBanner: false,
         theme: SafeZoneTheme.light,
         home: ListenableBuilder(
           listenable: session,
           builder: (context, _) => switch (session.status) {
             SessionStatus.restoring => const _StartupScreen(),
-            SessionStatus.signedOut => PoliceLoginScreen(session: session),
-            SessionStatus.authenticated => PoliceHomeScreen(session: session),
+            SessionStatus.signedOut => CitizenAuthScreen(session: session),
+            SessionStatus.authenticated => session.profile?.role == 'POLICE'
+                ? PoliceHomeScreen(session: session)
+                : CitizenHomeScreen(session: session),
           },
         ),
       );
@@ -49,7 +53,8 @@ class _StartupScreen extends StatelessWidget {
   const _StartupScreen();
   @override
   Widget build(BuildContext context) => const Scaffold(
-        body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        body: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.shield_rounded, size: 58, color: SafeZoneTheme.blue),
           SizedBox(height: 20),
           CircularProgressIndicator(),

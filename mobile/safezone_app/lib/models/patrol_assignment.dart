@@ -23,12 +23,14 @@ class PatrolAssignment {
     this.straightLineDistanceMeters,
   });
 
-  factory PatrolAssignment.fromJson(Map<String, dynamic> json) => PatrolAssignment(
+  factory PatrolAssignment.fromJson(Map<String, dynamic> json) =>
+      PatrolAssignment(
         id: json['id'] as String,
         patrolUnitId: json['patrol_unit_id'] as String,
         officerId: json['police_officer_id'] as String,
         prpId: json['prp_location_id'] as String,
-        prpLocation: GeoPoint.fromJson(json['prp_location'] as Map<String, dynamic>),
+        prpLocation:
+            GeoPoint.fromJson(json['prp_location'] as Map<String, dynamic>),
         shiftStart: DateTime.parse(json['shift_start'] as String),
         shiftEnd: DateTime.parse(json['shift_end'] as String),
         status: json['status'] as String,

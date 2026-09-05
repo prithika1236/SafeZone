@@ -18,10 +18,13 @@ class SessionController extends ChangeNotifier {
   Future<void> restore() async {
     try {
       final user = await api.currentUser();
-      if (user.role != 'POLICE') throw const ApiException('Police access is required.');
+      if (user.role != 'POLICE' && user.role != 'CITIZEN') {
+        throw const ApiException(
+            'This role is not available in the mobile application.');
+      }
       profile = user;
       status = SessionStatus.authenticated;
-      await refreshAssignment(silent: true);
+      if (user.role == 'POLICE') await refreshAssignment(silent: true);
     } on Exception {
       await api.logout();
       status = SessionStatus.signedOut;
@@ -34,9 +37,36 @@ class SessionController extends ChangeNotifier {
     refreshing = true;
     notifyListeners();
     try {
-      profile = await api.login(email, password);
+      profile = await api.loginForRole(email, password, expectedRole: 'POLICE');
       status = SessionStatus.authenticated;
       assignment = await api.currentAssignment();
+      return true;
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+      return false;
+    } finally {
+      refreshing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> citizenLogin(String email, String password) async =>
+      _citizenAuthentication(
+          () => api.loginForRole(email, password, expectedRole: 'CITIZEN'));
+
+  Future<bool> registerCitizen(
+          String name, String email, String password) async =>
+      _citizenAuthentication(() => api.registerCitizen(name, email, password));
+
+  Future<bool> _citizenAuthentication(
+      Future<UserProfile> Function() authenticate) async {
+    errorMessage = null;
+    refreshing = true;
+    notifyListeners();
+    try {
+      profile = await authenticate();
+      assignment = null;
+      status = SessionStatus.authenticated;
       return true;
     } on ApiException catch (error) {
       errorMessage = error.message;

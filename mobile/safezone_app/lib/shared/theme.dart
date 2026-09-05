@@ -6,6 +6,7 @@ class SafeZoneTheme {
   static const background = Color(0xFFF4F7FA);
   static const success = Color(0xFF087443);
   static const warning = Color(0xFFB54708);
+  static const danger = Color(0xFFD92D20);
 
   static ThemeData get light => ThemeData(
         useMaterial3: true,
@@ -40,7 +41,8 @@ class SafeZoneTheme {
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             textStyle: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),

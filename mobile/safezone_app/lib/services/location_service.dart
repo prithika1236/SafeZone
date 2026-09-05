@@ -46,7 +46,8 @@ class GeolocatorLocationService implements DeviceLocationService {
           timeLimit: Duration(seconds: 15),
         ),
       );
-      return GeoPoint(latitude: position.latitude, longitude: position.longitude);
+      return GeoPoint(
+          latitude: position.latitude, longitude: position.longitude);
     } on Exception {
       throw const LocationUnavailableException(
         'Your current location could not be obtained. Check GPS signal and try again.',
@@ -55,7 +56,8 @@ class GeolocatorLocationService implements DeviceLocationService {
   }
 
   @override
-  double distanceMeters(GeoPoint from, GeoPoint to) => Geolocator.distanceBetween(
+  double distanceMeters(GeoPoint from, GeoPoint to) =>
+      Geolocator.distanceBetween(
         from.latitude,
         from.longitude,
         to.latitude,
