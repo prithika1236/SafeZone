@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     firebase_credentials_path: str | None = Field(
         default=None, validation_alias="FIREBASE_CREDENTIALS_PATH"
     )
+    notification_adapter: Literal["auto", "firebase", "development"] = Field(
+        default="auto", validation_alias="NOTIFICATION_ADAPTER"
+    )
+    police_location_minimum_interval_seconds: PositiveInt = Field(
+        default=15, validation_alias="POLICE_LOCATION_MINIMUM_INTERVAL_SECONDS"
+    )
+    police_location_maximum_accuracy_meters: PositiveFloat = Field(
+        default=250.0, validation_alias="POLICE_LOCATION_MAXIMUM_ACCURACY_METERS"
+    )
     routing_service_base_url: AnyHttpUrl = Field(
         default=AnyHttpUrl("http://localhost:5000"),
         validation_alias="ROUTING_SERVICE_BASE_URL",
@@ -73,6 +82,12 @@ class Settings(BaseSettings):
     )
     default_proximity_radius_meters: PositiveFloat = Field(
         default=3000.0, validation_alias="DEFAULT_PROXIMITY_RADIUS_METERS"
+    )
+    sos_dispatch_radius_meters: PositiveFloat = Field(
+        default=10000.0, validation_alias="SOS_DISPATCH_RADIUS_METERS"
+    )
+    sos_dispatch_candidate_limit: int = Field(
+        default=5, ge=1, le=20, validation_alias="SOS_DISPATCH_CANDIDATE_LIMIT"
     )
     risk_frequency_weight: float = Field(default=0.25, ge=0, validation_alias="RISK_FREQUENCY_WEIGHT")
     risk_severity_weight: float = Field(default=0.30, ge=0, validation_alias="RISK_SEVERITY_WEIGHT")

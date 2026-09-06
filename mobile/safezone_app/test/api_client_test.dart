@@ -107,6 +107,64 @@ void main() {
     expect(contacts.single.name, 'Mother');
     expect(contacts.single.phoneNumber, '+91 9876543210');
   });
+
+  test('citizen SOS sends location and parses privacy-scoped status', () async {
+    final tokens = MemoryTokens()..value = 'citizen-token';
+    final client = ApiClient(
+        baseUrl: 'http://safezone.test',
+        tokenStore: tokens,
+        client: MockClient((request) async {
+          expect(request.url.path, '/sos');
+          expect(jsonDecode(request.body)['latitude'], 9.35);
+          return http.Response(
+              jsonEncode({
+                'id': 'sos-1',
+                'status': 'ASSIGNED',
+                'created_at': '2026-09-05T08:00:00Z',
+                'patrol_assigned': true,
+                'approximate_responder_distance_meters': 800,
+              }),
+              201);
+        }));
+    final sos = await client.createSOS(9.35, 78.51);
+    expect(sos.status, 'ASSIGNED');
+    expect(sos.approximateResponderDistanceMeters, 800);
+  });
+
+  test('police SOS transition uses the requested lifecycle action', () async {
+    final tokens = MemoryTokens()..value = 'police-token';
+    final client = ApiClient(
+        baseUrl: 'http://safezone.test',
+        tokenStore: tokens,
+        client: MockClient((request) async {
+          expect(request.url.path, '/sos/sos-2/accept');
+          return http.Response(
+              jsonEncode({
+                'id': 'sos-2',
+                'status': 'ACCEPTED',
+                'created_at': '2026-09-05T08:00:00Z',
+                'emergency_location': {'latitude': 9.35, 'longitude': 78.51},
+              }),
+              200);
+        }));
+    expect((await client.transitionSOS('sos-2', 'accept')).status, 'ACCEPTED');
+  });
+
+  test('live location uses scoped REST endpoint and websocket URL is derived',
+      () async {
+    final tokens = MemoryTokens()..value = 'police-token';
+    final client = ApiClient(
+      baseUrl: 'https://safezone.test/api-root',
+      tokenStore: tokens,
+      client: MockClient((request) async {
+        expect(request.url.path, '/api-root/live/police/location');
+        expect(request.headers['Authorization'], 'Bearer police-token');
+        return http.Response('{}', 200);
+      }),
+    );
+    await client.submitPoliceLocation(9.35, 78.51);
+    expect(client.sosWebSocketUrl, 'wss://safezone.test/api-root/ws/sos');
+  });
 }
 
 const policeProfile = {

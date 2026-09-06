@@ -28,6 +28,18 @@ ASSIGNMENT_MIGRATION_PATH = (
     / "versions"
     / "20260904_0004_patrol_assignment.py"
 )
+SOS_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "alembic"
+    / "versions"
+    / "20260905_0005_sos_dispatch.py"
+)
+LIVE_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "alembic"
+    / "versions"
+    / "20260906_0006_live_communications.py"
+)
 
 
 def test_initial_migration_matches_model_table_scope() -> None:
@@ -50,6 +62,7 @@ def test_initial_migration_matches_model_table_scope() -> None:
         "location_updates",
         "emergency_contacts",
         "risk_scores",
+        "device_registrations",
     }
 
 
@@ -95,3 +108,25 @@ def test_assignment_migration_follows_crime_management() -> None:
     source = ASSIGNMENT_MIGRATION_PATH.read_text(encoding="utf-8")
     assert "ACKNOWLEDGED" in source
     assert source.count("EXCLUDE USING gist") == 2
+
+
+def test_sos_migration_follows_patrol_assignment() -> None:
+    spec = spec_from_file_location("safezone_sos_migration", SOS_MIGRATION_PATH)
+    assert spec is not None and spec.loader is not None
+    migration = module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    assert migration.revision == "20260905_0005"
+    assert migration.down_revision == "20260904_0004"
+    source = SOS_MIGRATION_PATH.read_text(encoding="utf-8")
+    assert "uq_sos_requests_unit_open" in source
+    assert "accepted_at" in source
+
+
+def test_live_migration_follows_sos_dispatch() -> None:
+    spec = spec_from_file_location("safezone_live_migration", LIVE_MIGRATION_PATH)
+    assert spec is not None and spec.loader is not None
+    migration = module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    assert migration.revision == "20260906_0006"
+    assert migration.down_revision == "20260905_0005"
+    assert "device_registrations" in LIVE_MIGRATION_PATH.read_text(encoding="utf-8")

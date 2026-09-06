@@ -33,6 +33,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    application.state.settings = app_settings
 
     if app_settings.allowed_frontend_origins:
         application.add_middleware(

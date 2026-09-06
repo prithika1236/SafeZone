@@ -1,15 +1,89 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:safezone_app/models/sos_request.dart';
 import 'package:safezone_app/police/prp_assignment_screen.dart';
+import 'package:safezone_app/police/sos_response_screen.dart';
+import 'package:safezone_app/services/api_client.dart';
+import 'package:safezone_app/services/location_service.dart';
+import 'package:safezone_app/services/sos_event_channel.dart';
 import 'package:safezone_app/services/session_controller.dart';
 import 'package:safezone_app/shared/theme.dart';
 import 'package:safezone_app/shared/widgets.dart';
 
-class PoliceHomeScreen extends StatelessWidget {
+class PoliceHomeScreen extends StatefulWidget {
   const PoliceHomeScreen({required this.session, super.key});
   final SessionController session;
 
   @override
+  State<PoliceHomeScreen> createState() => _PoliceHomeScreenState();
+}
+
+class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
+  PoliceSOS? sos;
+  String? sosError;
+  Timer? locationTimer;
+  StreamSubscription<Map<String, dynamic>>? events;
+  late final SOSEventChannel eventChannel = SOSEventChannel(widget.session.api);
+  final DeviceLocationService location = GeolocatorLocationService();
+
+  @override
+  void initState() {
+    super.initState();
+    refreshSOS();
+    connectEvents();
+    locationTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => submitLocation());
+  }
+
+  Future<void> connectEvents() async {
+    try {
+      final stream = await eventChannel.connect();
+      events = stream.listen((_) => refreshAll(), onError: (_) {});
+    } on Exception {
+      // Manual pull-to-refresh remains available while WebSocket is offline.
+    }
+  }
+
+  Future<void> submitLocation() async {
+    if (widget.session.assignment == null && sos == null) return;
+    try {
+      final point = await location.determineCurrentPosition();
+      await widget.session.api
+          .submitPoliceLocation(point.latitude, point.longitude);
+    } on Exception {
+      // Location readiness is shown in the response/assignment screens; never loop aggressively.
+    }
+  }
+
+  @override
+  void dispose() {
+    locationTimer?.cancel();
+    events?.cancel();
+    eventChannel.close();
+    super.dispose();
+  }
+
+  Future<void> refreshSOS() async {
+    try {
+      final value = await widget.session.api.currentPoliceSOS();
+      if (mounted) {
+        setState(() {
+          sos = value;
+          sosError = null;
+        });
+      }
+    } on ApiException catch (error) {
+      if (mounted) setState(() => sosError = error.message);
+    }
+  }
+
+  Future<void> refreshAll() async {
+    await Future.wait([widget.session.refreshAssignment(), refreshSOS()]);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final session = widget.session;
     final profile = session.profile!;
     final assignment = session.assignment;
     return Scaffold(
@@ -20,7 +94,7 @@ class PoliceHomeScreen extends StatelessWidget {
             icon: const Icon(Icons.logout))
       ]),
       body: RefreshIndicator(
-        onRefresh: session.refreshAssignment,
+        onRefresh: refreshAll,
         child: ListView(padding: const EdgeInsets.all(18), children: [
           Text('Welcome, ${profile.name.split(' ').first}',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -31,6 +105,32 @@ class PoliceHomeScreen extends StatelessWidget {
           if (session.errorMessage case final message?) ...[
             ErrorNotice(message),
             const SizedBox(height: 14)
+          ],
+          if (sosError case final message?) ...[
+            ErrorNotice(message),
+            const SizedBox(height: 14)
+          ],
+          if (sos case final incident?) ...[
+            Card(
+                color: const Color(0xFFFFE9E7),
+                child: ListTile(
+                  onTap: () async {
+                    await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => SOSResponseScreen(
+                                api: session.api, initial: incident)));
+                    await refreshAll();
+                  },
+                  leading: const Icon(Icons.emergency,
+                      color: SafeZoneTheme.danger, size: 36),
+                  title: const Text('Emergency SOS assigned',
+                      style: TextStyle(fontWeight: FontWeight.w900)),
+                  subtitle: Text(
+                      '${shortId(incident.id)} • ${incident.status.replaceAll('_', ' ')}'),
+                  trailing: const Icon(Icons.chevron_right),
+                )),
+            const SizedBox(height: 14),
           ],
           Card(
               child: Padding(

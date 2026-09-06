@@ -12,6 +12,7 @@ from app.models.enums import UserRole
 if TYPE_CHECKING:
     from app.models.police import PoliceOfficer
     from app.models.sos import SOSRequest
+    from app.models.notification import DeviceRegistration
 
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -39,6 +40,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="owner", cascade="all, delete-orphan"
     )
     sos_requests: Mapped[list["SOSRequest"]] = relationship(back_populates="citizen")
+    device_registrations: Mapped[list["DeviceRegistration"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class EmergencyContact(UUIDPrimaryKeyMixin, TimestampMixin, Base):

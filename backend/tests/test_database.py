@@ -22,6 +22,7 @@ EXPECTED_TABLES = {
     "location_updates",
     "emergency_contacts",
     "risk_scores",
+    "device_registrations",
 }
 
 GEOSPATIAL_TABLES = {

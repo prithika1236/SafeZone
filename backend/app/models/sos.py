@@ -6,7 +6,7 @@ from uuid import UUID
 
 from geoalchemy2 import Geography
 from geoalchemy2.elements import WKBElement
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, UUIDPrimaryKeyMixin
@@ -50,6 +50,14 @@ class SOSRequest(UUIDPrimaryKeyMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    en_route_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    arrived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    responder_distance_meters: Mapped[float | None] = mapped_column(Numeric(12, 2))
+    estimated_duration_seconds: Mapped[float | None] = mapped_column(Numeric(12, 2))
+    distance_source: Mapped[str | None] = mapped_column(String(40))
 
     citizen: Mapped["User"] = relationship(back_populates="sos_requests")
     assigned_patrol_unit: Mapped["PatrolUnit | None"] = relationship(back_populates="sos_requests")

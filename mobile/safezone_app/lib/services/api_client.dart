@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:safezone_app/models/emergency_contact.dart';
 import 'package:safezone_app/models/patrol_assignment.dart';
+import 'package:safezone_app/models/sos_request.dart';
 import 'package:safezone_app/models/user_profile.dart';
 
 abstract interface class TokenStore {
@@ -50,6 +51,19 @@ class ApiClient {
   final http.Client _client;
   final TokenStore _tokens;
   final String baseUrl;
+
+  Future<String?> accessToken() => _tokens.read();
+
+  String get sosWebSocketUrl {
+    final uri = Uri.parse(baseUrl);
+    final prefix = uri.path.replaceAll(RegExp(r'/$'), '');
+    return uri
+        .replace(
+          scheme: uri.scheme == 'https' ? 'wss' : 'ws',
+          path: '$prefix/ws/sos',
+        )
+        .toString();
+  }
 
   Future<UserProfile> login(String email, String password) async {
     return loginForRole(email, password, expectedRole: 'POLICE');
@@ -130,6 +144,51 @@ class ApiClient {
 
   Future<void> deleteEmergencyContact(String id) async {
     await _authorizedRequest('DELETE', '/emergency-contacts/$id');
+  }
+
+  Future<CitizenSOS> createSOS(double latitude, double longitude) async =>
+      CitizenSOS.fromJson(await _authorizedJson('POST', '/sos', body: {
+        'latitude': latitude,
+        'longitude': longitude,
+      }));
+
+  Future<CitizenSOS?> currentCitizenSOS() async {
+    try {
+      return CitizenSOS.fromJson(await _authorizedJson('GET', '/sos/current'));
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  Future<CitizenSOS> cancelSOS(String id) async =>
+      CitizenSOS.fromJson(await _authorizedJson('POST', '/sos/$id/cancel'));
+
+  Future<PoliceSOS?> currentPoliceSOS() async {
+    try {
+      return PoliceSOS.fromJson(
+          await _authorizedJson('GET', '/sos/police/current'));
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  Future<PoliceSOS> transitionSOS(String id, String action) async =>
+      PoliceSOS.fromJson(await _authorizedJson('POST', '/sos/$id/$action'));
+
+  Future<void> submitPoliceLocation(double latitude, double longitude) async {
+    await _authorizedJson('POST', '/live/police/location', body: {
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
+
+  Future<void> registerNotificationDevice(String token, String platform) async {
+    await _authorizedJson('POST', '/notifications/devices', body: {
+      'token': token,
+      'platform': platform,
+    });
   }
 
   Future<UserProfile> currentUser() async =>

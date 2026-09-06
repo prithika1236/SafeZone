@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:safezone_app/citizen/emergency_contacts_screen.dart';
+import 'package:safezone_app/citizen/sos_status_screen.dart';
 import 'package:safezone_app/models/patrol_assignment.dart';
+import 'package:safezone_app/models/sos_request.dart';
+import 'package:safezone_app/services/api_client.dart';
 import 'package:safezone_app/services/location_service.dart';
 import 'package:safezone_app/services/session_controller.dart';
 import 'package:safezone_app/shared/theme.dart';
@@ -20,6 +23,25 @@ class _CitizenHomeScreenState extends State<CitizenHomeScreen> {
   GeoPoint? currentPosition;
   String locationMessage = 'Location has not been checked.';
   bool checkingLocation = false;
+  bool submittingSOS = false;
+  CitizenSOS? activeSOS;
+
+  @override
+  void initState() {
+    super.initState();
+    loadSOS();
+  }
+
+  Future<void> loadSOS() async {
+    try {
+      final value = await widget.session.api.currentCitizenSOS();
+      if (mounted) {
+        setState(() => activeSOS = value?.isTerminal == true ? null : value);
+      }
+    } on ApiException {
+      // The status screen provides detailed errors after a request exists.
+    }
+  }
 
   Future<void> checkLocation() async {
     setState(() {
@@ -46,22 +68,63 @@ class _CitizenHomeScreenState extends State<CitizenHomeScreen> {
     }
   }
 
-  void sosPreview() {
-    showDialog<void>(
+  Future<void> submitSOS() async {
+    if (activeSOS case final existing?) {
+      await openStatus(existing);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
               icon: const Icon(Icons.warning_amber_rounded,
                   color: SafeZoneTheme.danger, size: 42),
-              title: const Text('SOS dispatch coming next'),
-              content: Text(currentPosition == null
-                  ? 'Stage 12 does not create SOS requests. Check location first. Emergency dispatch will be connected in Stage 13.'
-                  : 'Your location is ready. Stage 12 intentionally does not submit an SOS; dispatch will be implemented in Stage 13.'),
+              title: const Text('Send emergency SOS?'),
+              content: const Text(
+                  'SafeZone will send your current location to police dispatch.'),
               actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel')),
                 FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Understood'))
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Send SOS'))
               ],
             ));
+    if (confirmed != true) return;
+    setState(() => submittingSOS = true);
+    try {
+      var point = currentPosition;
+      point ??= await location.determineCurrentPosition();
+      final sos =
+          await widget.session.api.createSOS(point.latitude, point.longitude);
+      if (!mounted) return;
+      setState(() {
+        currentPosition = point;
+        activeSOS = sos;
+      });
+      await openStatus(sos);
+    } on LocationUnavailableException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => submittingSOS = false);
+    }
+  }
+
+  Future<void> openStatus(CitizenSOS sos) async {
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                CitizenSOSStatusScreen(api: widget.session.api, initial: sos)));
+    await loadSOS();
   }
 
   @override
@@ -88,7 +151,7 @@ class _CitizenHomeScreenState extends State<CitizenHomeScreen> {
                 button: true,
                 label: 'SOS emergency button',
                 child: InkWell(
-                  onTap: sosPreview,
+                  onTap: submittingSOS ? null : submitSOS,
                   borderRadius: BorderRadius.circular(90),
                   child: Container(
                       width: 174,
@@ -116,7 +179,10 @@ class _CitizenHomeScreenState extends State<CitizenHomeScreen> {
                           ])),
                 ))),
         const SizedBox(height: 16),
-        const Text('SOS dispatch is not active in this stage.',
+        Text(
+            activeSOS == null
+                ? 'Tap only when you need immediate assistance.'
+                : 'Active emergency: ${activeSOS!.status.replaceAll('_', ' ')}',
             textAlign: TextAlign.center),
         const SizedBox(height: 28),
         Card(
@@ -151,8 +217,12 @@ class _CitizenHomeScreenState extends State<CitizenHomeScreen> {
             child: ListTile(
           leading: const Icon(Icons.health_and_safety_outlined,
               color: SafeZoneTheme.success),
+          onTap: activeSOS == null ? null : () => openStatus(activeSOS!),
           title: const Text('Emergency status'),
-          subtitle: const Text('No active emergency'),
+          subtitle: Text(activeSOS == null
+              ? 'No active emergency'
+              : activeSOS!.status.replaceAll('_', ' ')),
+          trailing: activeSOS == null ? null : const Icon(Icons.chevron_right),
         )),
         const SizedBox(height: 14),
         Card(

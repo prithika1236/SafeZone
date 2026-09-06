@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:safezone_app/main.dart';
 import 'package:safezone_app/models/patrol_assignment.dart';
+import 'package:safezone_app/models/sos_request.dart';
 import 'package:safezone_app/models/user_profile.dart';
 import 'package:safezone_app/services/api_client.dart';
 import 'package:safezone_app/services/session_controller.dart';
@@ -25,8 +26,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SafeZone Citizen'), findsOneWidget);
-    expect(
-        find.text('SOS dispatch is not active in this stage.'), findsOneWidget);
+    expect(find.text('Tap only when you need immediate assistance.'),
+        findsOneWidget);
     expect(find.text('Emergency support when you need it.'), findsOneWidget);
   });
 
@@ -74,6 +75,9 @@ class _PoliceApi extends _SignedOutApi {
 
   @override
   Future<PatrolAssignment?> currentAssignment() async => null;
+
+  @override
+  Future<PoliceSOS?> currentPoliceSOS() async => null;
 }
 
 class _CitizenApi extends _SignedOutApi {
@@ -85,4 +89,7 @@ class _CitizenApi extends _SignedOutApi {
         role: 'CITIZEN',
         isActive: true,
       );
+
+  @override
+  Future<CitizenSOS?> currentCitizenSOS() async => null;
 }

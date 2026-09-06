@@ -13,6 +13,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.location import LocationUpdate
+from app.models.notification import DeviceRegistration
 from app.models.optimization import OptimizationRun, PRPLocation, RiskScore
 from app.models.police import PatrolUnit, PoliceOfficer
 from app.models.sos import SOSRequest
@@ -24,6 +25,7 @@ __all__ = [
     "CrimeIncidentStatus",
     "EmergencyContact",
     "LocationUpdate",
+    "DeviceRegistration",
     "OfficerAvailability",
     "OptimizationRun",
     "OptimizationRunStatus",
